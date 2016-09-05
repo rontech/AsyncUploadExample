@@ -97,7 +97,7 @@ public class AsyncController extends Controller {
                     File tmpFile = new File("/tmp/" + fileP.getFilename());
                     file.renameTo(tmpFile);
                     try {
-                        Thread.sleep(60000);
+                        Thread.sleep(30000);
                         future.complete(tmpFile.getCanonicalPath()); 
                     } catch(Exception e) {
                         future.complete("no file path"); 
@@ -105,11 +105,11 @@ public class AsyncController extends Controller {
                 } else {
                     future.complete("Upload Error"); 
                 }
+     System.out.println("End  job...");
+     System.out.println(new Timestamp(new Date().getTime()));
             },
             exec
         );
-     System.out.println("End  job...");
-     System.out.println(new Timestamp(new Date().getTime()));
         return future;
     }
 
