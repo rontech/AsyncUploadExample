@@ -8,6 +8,7 @@
   <input type="file" id="file" name="file" />
   <input type="submit" id="submit" name="" value="Upload" />
 </form>
+<div id="loading"  style="display:none;" >Loading中...</div>
 
 <script>
 $('#submit').click(function (event) {
@@ -15,6 +16,7 @@ $('#submit').click(function (event) {
    var file = $('#file').get(0).files[0];
    var formData = new FormData();
    formData.append('file', file);
+   $("#loading").css("display","block");
    $.ajax({
        url: 'upload',
        data: formData,
@@ -25,10 +27,12 @@ $('#submit').click(function (event) {
          alert('Are you sure you want to upload document?');
        },
        success: function (data) {
+         $("#loading").css("display","none");
          //call your jQuery action here
          alert('Upload completed: ' + data);
        },
        error: function (jqXHR, textStatus, errorThrown) {
+         $("#loading").css("display","none");
          alert(textStatus + ': ' + errorThrown);
        }
     });

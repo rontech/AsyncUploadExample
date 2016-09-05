@@ -80,7 +80,7 @@ public class AsyncController extends Controller {
         Http.MultipartFormData.FilePart fileP = body.getFile("file");
      System.out.println("Start  job...");
      System.out.println(new Timestamp(new Date().getTime()));
-        CompletionStage<Result> res =  uploadAndUpdate(1, TimeUnit.SECONDS, fileP).thenApplyAsync(Results::ok, exec);
+        CompletionStage<Result> res =  uploadAndUpdate(3, TimeUnit.MILLISECONDS, fileP).thenApplyAsync(Results::ok, exec);
      System.out.println("End request...");
      System.out.println(new Timestamp(new Date().getTime()));
         return res;
@@ -97,7 +97,7 @@ public class AsyncController extends Controller {
                     File tmpFile = new File("/tmp/" + fileP.getFilename());
                     file.renameTo(tmpFile);
                     try {
-                        Thread.sleep(30000);
+                        Thread.sleep(20000);
                         future.complete(tmpFile.getCanonicalPath()); 
                     } catch(Exception e) {
                         future.complete("no file path"); 
