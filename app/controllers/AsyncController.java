@@ -97,6 +97,7 @@ public class AsyncController extends Controller {
                     File tmpFile = new File("/tmp/" + fileP.getFilename());
                     file.renameTo(tmpFile);
                     try {
+                        Thread.sleep(60000);
                         future.complete(tmpFile.getCanonicalPath()); 
                     } catch(Exception e) {
                         future.complete("no file path"); 
