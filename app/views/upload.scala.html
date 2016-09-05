@@ -1,0 +1,33 @@
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+
+<form enctype="multipart/form-data">
+  <input type="file" id="file" name="file" />
+  <input type="submit" id="submit" name="" value="Upload" />
+</form>
+
+<script>
+$('#submit').click(function (event) {
+   event.preventDefault();
+   var file = $('#file').get(0).files[0];
+   var formData = new FormData();
+   formData.append('file', file);
+   $.ajax({
+       url: 'upload',
+       data: formData,
+       type: 'POST',
+       contentType: false,
+       processData: false,
+       beforeSend: function (data) {
+         alert('Are you sure you want to upload document?');
+       },
+       success: function (data) {
+         //call your jQuery action here
+         alert('Upload completed: ' + data);
+       },
+       error: function (jqXHR, textStatus, errorThrown) {
+         alert(textStatus + ': ' + errorThrown);
+       }
+    });
+    return false;
+});
+</script>
