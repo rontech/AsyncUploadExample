@@ -8,6 +8,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import scala.concurrent.Future;
+import scala.concurrent.Await;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.ExecutionContextExecutor;
 
@@ -15,6 +18,12 @@ import views.html.*;
 import java.io.File;
 import java.sql.Timestamp;
 import java.util.Date;
+import akka.actor.*;
+import akka.util.Timeout;
+import play.data.Form;
+import static akka.pattern.Patterns.ask;
+import akka.dispatch.*;
+import actors.UpdateActor;
 
 
 /**
@@ -42,28 +51,6 @@ public class AsyncController extends Controller {
     }
 
     /**
-     * An action that returns a plain text message after a delay
-     * of 1 second.
-     *
-     * The configuration in the <code>routes</code> file means that this method
-     * will be called when the application receives a <code>GET</code> request with
-     * a path of <code>/message</code>.
-     */
-    public CompletionStage<Result> message() {
-        return getFutureMessage(30, TimeUnit.SECONDS).thenApplyAsync(Results::ok, exec);
-    }
-
-    private CompletionStage<String> getFutureMessage(long time, TimeUnit timeUnit) {
-        CompletableFuture<String> future = new CompletableFuture<>();
-        actorSystem.scheduler().scheduleOnce(
-            Duration.create(time, timeUnit),
-            () -> future.complete("Your new application is ready."),
-            exec
-        );
-        return future;
-    }
-
-    /**
      */
     public Result uploadBefore() {
         return ok(upload.render());
@@ -71,47 +58,47 @@ public class AsyncController extends Controller {
 
     /**
      */
-    //public Result upload() {
-    public CompletionStage<Result> upload() {
-     System.out.println("Start request ...");
-
-     System.out.println(new Timestamp(new Date().getTime()));
+    public Result upload() {
         Http.MultipartFormData body = request().body().asMultipartFormData();
         Http.MultipartFormData.FilePart fileP = body.getFile("file");
-     System.out.println("Start  job...");
-     System.out.println(new Timestamp(new Date().getTime()));
-        CompletionStage<Result> res =  uploadAndUpdate(3, TimeUnit.MILLISECONDS, fileP).thenApplyAsync(Results::ok, exec);
-     System.out.println("End request...");
-     System.out.println(new Timestamp(new Date().getTime()));
-        return res;
+        if (fileP != null) {
+            File file = (File )fileP.getFile();
+            File tmpFile = new File("/tmp/" + fileP.getFilename());
+            file.renameTo(tmpFile);
+ 
+            try {
+                ActorRef updateActor = actorSystem.actorOf(
+                Props.create(UpdateActor.class), "001_" + tmpFile.getName());
+                updateActor.tell("start:" + tmpFile.getName(), ActorRef.noSender());
+                return ok(tmpFile.getName());
+            } catch (Exception e) {
+                e.printStackTrace();
+                return ok("error");
+            }
+        }
+        return ok("error");
     }
 
-    private CompletionStage<String> uploadAndUpdate(long time, 
-                TimeUnit timeUnit, Http.MultipartFormData.FilePart fileP) {
-        CompletableFuture<String> future = new CompletableFuture<>();
-        actorSystem.scheduler().scheduleOnce(
-            Duration.create(time, timeUnit),
-            () ->  {
-                if (fileP != null) {
-                    File file = (File )fileP.getFile();
-                    File tmpFile = new File("/tmp/" + fileP.getFilename());
-                    file.renameTo(tmpFile);
-                    try {
-                        Thread.sleep(20000);
-                        future.complete(tmpFile.getCanonicalPath()); 
-                    } catch(Exception e) {
-                        future.complete("no file path"); 
-                    }
-                } else {
-                    future.complete("Upload Error"); 
-                }
-     System.out.println("End  job...");
-     System.out.println(new Timestamp(new Date().getTime()));
-            },
-            exec
-        );
-        return future;
+    public Result uploadAfter() {
+        final Timeout timeout = new Timeout(Duration.create(5, TimeUnit.SECONDS));
+        String fileName =  request().getQueryString("file_name");
+        ActorSelection selection = actorSystem.actorSelection("akka://application/user/001_" + fileName);
+        try {
+           ActorRef updateActor = Await.result(selection.resolveOne(timeout), timeout.duration());
+            if(updateActor.isTerminated()) {
+                return ok("completed");
+            }
+            //ask method
+            Future<Object> rt = ask(updateActor, "polling", timeout);
+            String result = (String) Await.result(rt, timeout.duration());
+            return ok("completed");
+        } catch ( akka.actor.ActorNotFound anf) {
+            return ok("completed");
+        } catch (TimeoutException te) {
+            return ok("timeout");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ok("error");
+        }
     }
-
-
 }

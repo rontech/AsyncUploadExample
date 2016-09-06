@@ -8,16 +8,19 @@
   <input type="file" id="file" name="file" />
   <input type="submit" id="submit" name="" value="Upload" />
 </form>
-<div id="loading"  style="display:none;" >Loading中...</div>
+<div id="uploading"  style="display:none;" >アップロード中...</div>
+<div id="updating"  style="display:none;" >更新中...</div>
 
 <script>
+//クリック処理
 $('#submit').click(function (event) {
    event.preventDefault();
    var file = $('#file').get(0).files[0];
    var formData = new FormData();
+   var fileName = null;
    formData.append('file', file);
-   $("#loading").css("display","block");
-   $.ajax({
+   $("#uploading").css("display","block");
+   var res = $.ajax({
        url: 'upload',
        data: formData,
        type: 'POST',
@@ -25,19 +28,69 @@ $('#submit').click(function (event) {
        processData: false,
        beforeSend: function (data) {
          alert('Are you sure you want to upload document?');
-       },
-       success: function (data) {
-         $("#loading").css("display","none");
-         //call your jQuery action here
-         alert('Upload completed: ' + data);
-       },
-       error: function (jqXHR, textStatus, errorThrown) {
-         $("#loading").css("display","none");
-         alert(textStatus + ': ' + errorThrown);
        }
-    });
-    return false;
+   }).done(
+      function(data) {
+        $("#uploading").css("display","none");
+        fileName = data;
+        alert('Upload completed: ' + data);
+        if( fileName != "error" ) {
+          $("#updating").css("display","block");
+          polling(fileName);
+        }
+      }
+   ).fail(
+    function (jqXHR, textStatus, errorThrown) {
+      $("#uploading").css("display","none");
+      alert(textStatus + ': ' + errorThrown);
+    }
+   );
+  return false;
 });
+
+// 3秒毎にポーリング
+function polling(fileName) {
+  $.ajax({
+         url: 'upload_after',
+         data: {'file_name': fileName},
+         type: 'GET'
+  })
+  .then(
+    function(data, status, xhr) {
+      // 取得したデータの内容によってDeferredの状態を変更する
+      var d = $.Deferred();
+      if (data == "timeout") {
+        d.resolve();
+      } else {
+        console.log("終了!");
+        d.reject();
+      }
+      // Promiseを返す
+      return d.promise();
+    })
+  .done(function() {
+    mySleep(5);
+    polling(fileName);
+  })
+  .fail(
+    function () {
+      $("#updating").css("display","none");
+      alert('Update completed! ');
+    });
+}
+
+function mySleep(time) {
+  return (
+    function() {
+      var dfd = $.Deferred();
+      setTimeout(
+        function() {
+          dfd.resolve();
+        },
+        time * 1000);
+      return dfd.promise();
+    });
+}
 </script>
 <body>
 </html>
