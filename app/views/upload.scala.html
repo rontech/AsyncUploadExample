@@ -69,7 +69,7 @@ function polling(fileName) {
       return d.promise();
     })
   .done(function() {
-    mySleep(5);
+    mySleep(3);
     polling(fileName);
   })
   .fail(
@@ -79,6 +79,7 @@ function polling(fileName) {
     });
 }
 
+//sleepファンクション
 function mySleep(time) {
   return (
     function() {
