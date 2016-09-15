@@ -2,16 +2,20 @@
 <html lang="en">
     <head>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script src="@routes.Assets.versioned("javascripts/jquery.loading-indicator.js")" type="text/javascript"></script>
+    <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/jquery.loading-indicator.css")">
     </head>
 <body>
 <form enctype="multipart/form-data">
   <input type="file" id="file" name="file" />
   <input type="submit" id="submit" name="" value="Upload" />
 </form>
-<div id="uploading"  style="display:none;" >アップロード中...</div>
-<div id="updating"  style="display:none;" >更新中...</div>
 
 <script>
+var homeLoader = $('body').loadingIndicator({
+       useImage: false,
+       showOnInit: false
+}).data("loadingIndicator");
 //クリック処理
 $('#submit').click(function (event) {
    event.preventDefault();
@@ -19,7 +23,6 @@ $('#submit').click(function (event) {
    var formData = new FormData();
    var fileName = null;
    formData.append('file', file);
-   $("#uploading").css("display","block");
    var res = $.ajax({
        url: 'upload',
        data: formData,
@@ -27,21 +30,18 @@ $('#submit').click(function (event) {
        contentType: false,
        processData: false,
        beforeSend: function (data) {
-         alert('Are you sure you want to upload document?');
+         homeLoader.show();
        }
    }).done(
       function(data) {
-        $("#uploading").css("display","none");
         fileName = data;
-        alert('Upload completed: ' + data);
         if( fileName != "error" ) {
-          $("#updating").css("display","block");
           polling(fileName);
         }
       }
    ).fail(
     function (jqXHR, textStatus, errorThrown) {
-      $("#uploading").css("display","none");
+      homeLoader.hide();
       alert(textStatus + ': ' + errorThrown);
     }
    );
@@ -74,7 +74,7 @@ function polling(fileName) {
   })
   .fail(
     function () {
-      $("#updating").css("display","none");
+      homeLoader.hide();
       alert('Update completed! ');
     });
 }
